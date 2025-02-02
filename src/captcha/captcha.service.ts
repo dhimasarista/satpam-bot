@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import * as mime from 'mime-types';
 import { DataSource } from 'typeorm';
 import * as path from 'path';
@@ -62,7 +62,7 @@ export class CaptchaService {
   async validateCaptcha(captchaId: string, userInput: string) {
     const captchaRepository = this.getCaptchaRepository();
     const captcha = await captchaRepository.findOne({ where: { id: captchaId } });
-    
+
     if (!captcha || captcha.isValidated) {
       throw new BadRequestException('captcha not found');
     }
@@ -80,7 +80,7 @@ export class CaptchaService {
     };
   }
 
-  async resetCaptcha(id: string): Promise<void> {
+  async resetCaptcha(id: string) {
     const captchaRepository = this.getCaptchaRepository();
 
     try {
@@ -108,8 +108,13 @@ export class CaptchaService {
         isValidated: false,
       });
 
+      const fileBuffer = fs.readFileSync(imagePath);
+      const mimeType = mime.lookup(imagePath) || 'application/octet-stream';
+  
+      return { fileBuffer, mimeType };
     } catch (error) {
-      throw new BadRequestException(`Failed to reset captcha: ${error.message}`);
+      Logger.error(error);
+      throw new BadRequestException(`${error.message}`);
     }
   }
 
