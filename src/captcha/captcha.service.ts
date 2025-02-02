@@ -33,54 +33,85 @@ export class CaptchaService {
     return this.dataSource.getRepository(Captcha); // Mengambil repository secara dinamis
   }
 
+  async getCaptcha(captchaId: string) {
+    const captchaRepository = this.getCaptchaRepository();
+
+    let captcha = await captchaRepository.findOne({
+      where: { id: captchaId },
+    });
+
+    if (!captcha) {
+      return this.createCaptcha(captchaId);
+    }
+
+    if (captcha.isValidated) {
+      throw new BadRequestException('Captcha already validated');
+    }
+
+    const imagePath = path.join(__dirname, '..', '..', 'data', captcha.image);
+    const fileBuffer = fs.existsSync(imagePath) ? fs.readFileSync(imagePath) : null;
+    if (!fileBuffer) {
+      throw new BadRequestException('Captcha image not found');
+    }
+
+    const mimeType = mime.lookup(imagePath) || 'application/octet-stream';
+
+    return { captcha, fileBuffer, mimeType };
+  }
+
   async validateCaptcha(captchaId: string, userInput: string) {
     const captchaRepository = this.getCaptchaRepository();
-    const session = await captchaRepository.findOne({ where: { id: captchaId } });
-
-    if (!session || !session.isValidated) {
-      throw new BadRequestException('Session not found');
+    const captcha = await captchaRepository.findOne({ where: { id: captchaId } });
+    
+    if (!captcha || captcha.isValidated) {
+      throw new BadRequestException('captcha not found');
     }
 
-    if (session.code === userInput) {
-      session.isValidated = true;
-      await captchaRepository.save(session);
-      return true;
+    
+    if (captcha.code === userInput.toString()) {
+      captcha.isValidated = true;
+      await captchaRepository.save(captcha);
+      return {
+        message: "captcha is valid"
+      };
     }
-    return false;
+    return {
+      message: "captcha not valid"
+    };
   }
 
   async resetCaptcha(id: string): Promise<void> {
     const captchaRepository = this.getCaptchaRepository();
-    
+
     try {
       // Ambil captcha yang ada berdasarkan ID
       const captcha = await captchaRepository.findOne({ where: { id } });
-  
+
       // Jika captcha tidak ditemukan, lempar error
       if (!captcha) {
         throw new BadRequestException(`Captcha with ID ${id} not found`);
       }
-  
+
       // Generate captcha baru
       const randomCaptcha = this.randomCaptcha();
       const imagePath = path.join(__dirname, '..', '..', 'data', randomCaptcha.image_path);
-  
+
       // Cek apakah file image ada
       if (!fs.existsSync(imagePath)) {
         throw new BadRequestException(`Captcha image file not found at ${imagePath}`);
       }
-  
+
       // Update captcha dengan data baru
       await captchaRepository.update(id, {
         image: randomCaptcha.image_path,
         code: randomCaptcha.solution,
         isValidated: false,
       });
-  
+
     } catch (error) {
       throw new BadRequestException(`Failed to reset captcha: ${error.message}`);
     }
-  }  
+  }
 
   private randomCaptcha() {
     return this.captchaData[Math.floor(Math.random() * 6001)];
@@ -107,32 +138,6 @@ export class CaptchaService {
     const mimeType = mime.lookup(imagePath) || 'application/octet-stream';
 
     return { captcha: newCaptcha, fileBuffer, mimeType };
-  }
-
-async getCaptcha(captchaId: string) {
-    const captchaRepository = this.getCaptchaRepository();
-
-    let captcha = await captchaRepository.findOne({
-      where: { id: captchaId },
-    });
-
-    if (!captcha) {
-      return this.createCaptcha(captchaId);
-    }
-
-    if (captcha.isValidated) {
-      throw new BadRequestException('Captcha already validated');
-    }
-
-    const imagePath = path.join(__dirname, '..', '..', 'data', captcha.image);
-    const fileBuffer = fs.existsSync(imagePath) ? fs.readFileSync(imagePath) : null;
-    if (!fileBuffer) {
-      throw new BadRequestException('Captcha image not found');
-    }
-
-    const mimeType = mime.lookup(imagePath) || 'application/octet-stream';
-
-    return { captcha, fileBuffer, mimeType };
   }
 
 
