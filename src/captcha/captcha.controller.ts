@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Body, Patch, Query, Res, Req, Session } from '@nestjs/common';
 import { CaptchaService } from './captcha.service';
-import { Response } from 'express';
+import { Response, Request } from 'express';
 import { errorResponse } from 'src/utils/error_handling';
 import { randomUUID } from 'crypto';
 
@@ -12,12 +12,12 @@ export class CaptchaController {
   async getCaptcha(@Session() session: Record<string, any>, @Res() res: Response, @Req() req: Request) {
     try {
       if (!session.captchaId) {
-        session.captchaId = randomUUID();  // Atur ID captcha unik untuk setiap perangkat
+        const captchId = randomUUID();  // Atur ID captcha unik untuk setiap perangkat
+        session.captchaId = captchId;
       }
       
       // Mendapatkan captcha berdasarkan CaptchaId
       const { fileBuffer, mimeType } = await this.captchaService.getCaptcha(session.captchaId);
-      
       // Set MIME type dan kirimkan gambar
       res.setHeader('Content-Type', mimeType);
       return res.send(fileBuffer);
@@ -27,10 +27,14 @@ export class CaptchaController {
   }
 
   @Post()
-  async validateCaptcha(@Session() session: Record<string, any>, @Body() body: { code: string }) {
-    const { code } = body;
-    const isValid = await this.captchaService.validateCaptcha(session.captchaId, code);
-    return { success: isValid };
+  async validateCaptcha(@Session() session: Record<string, any>, @Req() req: Request, @Res() res: Response, @Body() body: { code: string }) {
+    try {
+      const { code } = body;
+      const captcha = await this.captchaService.validateCaptcha(session.captchaId, code);
+      return res.status(200).json(captcha);
+    } catch (error) {
+      errorResponse(error, res);
+    }
   }
 
   @Patch()
