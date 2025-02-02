@@ -77,10 +77,7 @@ export class CaptchaService {
         isValidated: false,
       });
   
-      console.log(`Captcha with ID ${id} has been reset successfully.`);
     } catch (error) {
-      // Tangani error dan lemparkan exception jika ada
-      console.error('Error resetting captcha:', error);
       throw new BadRequestException(`Failed to reset captcha: ${error.message}`);
     }
   }  
@@ -128,8 +125,6 @@ async getCaptcha(captchaId: string) {
     }
 
     const imagePath = path.join(__dirname, '..', '..', 'data', captcha.image);
-    console.log(`getCaptcha ${imagePath}`);
-    
     const fileBuffer = fs.existsSync(imagePath) ? fs.readFileSync(imagePath) : null;
     if (!fileBuffer) {
       throw new BadRequestException('Captcha image not found');
