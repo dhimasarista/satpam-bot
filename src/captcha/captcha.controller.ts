@@ -38,8 +38,15 @@ export class CaptchaController {
   }
 
   @Patch()
-  async resetCaptcha(@Query('id') id: string) {
-    await this.captchaService.resetCaptcha(id);
-    return { success: true };
+  async resetCaptcha(@Session() session: Record<string, any>, @Res() res: Response,) {
+    try {
+      console.log(session);
+      
+      const { fileBuffer, mimeType } = await this.captchaService.resetCaptcha(session.captchaId);
+      res.setHeader('Content-Type', mimeType);
+      return res.send(fileBuffer);
+    } catch (error) {
+      errorResponse(error, res);
+    }
   }
 }
