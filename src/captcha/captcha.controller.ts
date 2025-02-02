@@ -14,7 +14,6 @@ export class CaptchaController {
       if (!session.captchaId) {
         session.captchaId = randomUUID();  // Atur ID captcha unik untuk setiap perangkat
       }
-      console.log(session);
       
       // Mendapatkan captcha berdasarkan CaptchaId
       const { fileBuffer, mimeType } = await this.captchaService.getCaptcha(session.captchaId);
